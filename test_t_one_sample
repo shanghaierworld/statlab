@@ -1,0 +1,71 @@
+import warnings
+import math
+
+import math
+from scipy.stats import t as student_t   # uniquement pour la CDF
+
+def one_sample_t_test(x_bar, mu0, s, n, alpha=0.05, alternative="two-sided"):
+    """
+    Perform a one-sample t-test to compare the sample mean to a hypothesized population mean,
+    with unknown sigma (population standard deviation), using s as an estimate of sigma.
+
+    Parameters:
+        x_bar : sample mean
+        mu0 : hypothesized population mean
+        s : sample standard deviation
+        n : sample size
+        alpha : significance level (default 0.05)
+        alternative : type of alternative hypothesis ('two-sided', 'greater', 'less')
+
+    Returns:
+        dict with t, p-value and decision
+    """
+
+    # Validation des entrees
+    if alternative not in {"two-sided", "greater", "less"}:
+        raise ValueError("alternative must be 'two-sided', 'greater' or 'less'")
+
+    numeric_inputs = {
+        "x_bar": x_bar,
+        "mu0": mu0,
+        "s": s,
+        "alpha": alpha,
+    }
+    # Check data validity: ensure all numeric inputs are finite real numbers and s is positive
+    for name, value in numeric_inputs.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite real number")
+    if not isinstance(n, int) or n <= 0:
+        raise ValueError("n must be a positive integer")
+    if s <= 0:
+        raise ValueError("s must be strictly positive")
+    if not (0 < alpha < 1):
+        raise ValueError("alpha must be between 0 and 1")
+    if n < 30:
+        warnings.warn(
+            "n < 30: verify normality of the population, otherwise prefer a one-sample t-test.",
+            UserWarning,
+            # Apply the warning to the caller of this function, not the python insighta library
+            stacklevel=2,
+        ) 
+    
+    # Statistique t
+    t = (x_bar - mu0) / (s / math.sqrt(n))
+    # Calcul p-value selon hypothèse alternative
+    # p-value
+    if alternative == "two-sided":
+        p_value = 2 * (1 - student_t.cdf(abs(t), n - 1))
+    elif alternative == "greater":
+        p_value = 1 - student_t.cdf(t, n - 1)
+    elif alternative == "less":
+        p_value = student_t.cdf(t, n - 1)
+    else:
+        raise ValueError("alternative must be 'two-sided', 'greater' or 'less'")
+    
+    decision = "Reject H0" if p_value < alpha else "Fail to reject H0"
+    return {
+        "t_statistic": t,
+        "p_value": p_value,
+        "alpha": alpha,
+        "decision": decision
+    }

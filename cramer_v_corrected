@@ -1,0 +1,47 @@
+import warnings
+import numpy as np
+from chi2_independance import chi2_ind
+
+def cramer_v_corr(observed):
+    """
+    Calculate Cramér's V statistic as effect size, corrected for bias. 
+    Magnitude of association between two categorical variables in a contingency table.
+
+    Parameters:
+    observed (array-like): A contingency table (2D array) of observed frequencies.
+
+    Outputs:
+    float: Cramér's V statistic, ranging from 0 to 1.
+    """
+
+    results = chi2_ind(observed)
+
+    chi2_stat = results['chi_squared_statistic']
+    chi_stat_corrected = max(0, chi2_stat - (observed.shape[0] - 1) * (observed.shape[1] - 1))
+    n = np.sum(observed)
+    r, c = observed.shape
+    r_corrected = r - ((r - 1)**2 / n)
+    c_corrected = c - ((c - 1)**2 / n)
+    min_dim_corrected = min(r_corrected - 1, c_corrected - 1)
+
+    # Correction de bias pour Cramér's V
+    cramer_v_corrected = np.sqrt(chi_stat_corrected / (n * min_dim_corrected))
+
+    if cramer_v_corrected < 0 or cramer_v_corrected > 1:
+        warnings.warn("Cramér's V value is out of bounds (0 to 1). Check the input data and calculations.")
+    else:
+        if cramer_v_corrected < 0.1:
+            strength = 'negligible'
+        elif cramer_v_corrected < 0.3:
+            strength = 'weak'
+        elif cramer_v_corrected < 0.5:
+            strength = 'moderate'
+        else:            
+            strength = 'strong'
+        
+    results = {
+        'p_value': results['p_value'],
+        'cramer value corrected': cramer_v_corrected,
+        'interpretation of strength': strength
+    }
+    return results

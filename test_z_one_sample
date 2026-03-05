@@ -1,0 +1,89 @@
+import math
+import warnings
+
+def normal_cdf(x):
+    """Fonction de répartition de la loi normale standard"""
+    return 0.5 * (1 + math.erf(x / math.sqrt(2)))
+
+
+def one_sample_z_test(x_bar, mu0, sigma, n, alpha=0.05, alternative="two-sided"):
+    """
+    Test z à un echantillon pour la moyenne d'une population avec écart-type connu.
+    par defaut, test bilatéral (two-sided), possibilite de faire un test unilateral (greater ou less)
+
+    Conditions d'application:
+        - observations indépendantes (echantillon aleatoire)
+        - ecart-type population sigma connu
+        - population normale ou taille d'echantillon suffisamment grande (souvent n >= 30)
+
+    Limitations:
+        - si sigma est inconnu (ou estimé), il faut utiliser un test t de Student
+        - avec petit n et distribution non normale, le test z peut etre trompeur
+        - sensible aux valeurs aberrantes
+
+    Parameters:
+        x_bar : moyenne observee
+        mu0 : moyenne sous H0 (la moyenne hypothetique de la population,
+            ce qui correspond à la moyenne de l'echantillon si H0 est vraie)
+        sigma : écart-type population (connu)
+        n : taille echantillon
+        alpha : seuil de significativite
+        alternative : 'two-sided', 'greater', 'less'
+
+    Returns:
+        dict avec z, p-value et decision
+    """
+
+    # Validation des entrees
+    if alternative not in {"two-sided", "greater", "less"}:
+        raise ValueError("alternative must be 'two-sided', 'greater' or 'less'")
+
+    numeric_inputs = {
+        "x_bar": x_bar,
+        "mu0": mu0,
+        "sigma": sigma,
+        "alpha": alpha,
+    }
+
+    # Check data validity: ensure all numeric inputs are finite real numbers and sigma is positive
+    for name, value in numeric_inputs.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite real number")
+
+    # Check the type and value of n
+    if not isinstance(n, int) or n <= 0:
+        raise ValueError("n must be a positive integer")
+    
+    if sigma <= 0:
+        raise ValueError("sigma must be strictly positive")
+
+    if not (0 < alpha < 1):
+        raise ValueError("alpha must be between 0 and 1")
+
+    if n < 30:
+        warnings.warn(
+            "n < 30: verify normality of the population, otherwise prefer a one-sample t-test.",
+            UserWarning,
+            # Apply the warning to the caller of this function, not the python insighta library
+            stacklevel=2,
+        )
+
+    # Statistique z
+    z = (x_bar - mu0) / (sigma / math.sqrt(n))
+
+    # Calcul p-value selon hypothèse alternative
+    if alternative == "two-sided":
+        p_value = 2 * (1 - normal_cdf(abs(z)))
+    elif alternative == "greater":
+        p_value = 1 - normal_cdf(z)
+    elif alternative == "less":
+        p_value = normal_cdf(z)
+
+    decision = "Reject H0" if p_value < alpha else "Fail to reject H0"
+
+    return {
+        "z_statistic": z,
+        "p_value": p_value,
+        "alpha": alpha,
+        "decision": decision
+    }

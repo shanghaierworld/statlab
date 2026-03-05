@@ -3,7 +3,7 @@ import numpy as np
 from scipy.special import gammaincc
 import warnings
 
-def chi2_independance(observed, alpha=0.05):
+def chi2_ind(observed, alpha=0.05):
     """
     Calculate the chi-squared statistic for a set of observed values.
     
@@ -58,5 +58,5 @@ def chi2_independance(observed, alpha=0.05):
         "degrees_of_freedom": ddl,
         "expected_values": expected,
         "decision": "reject H_0" if p_value < alpha else "fail to reject H_0"
-}    
+    }    
     return results

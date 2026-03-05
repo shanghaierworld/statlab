@@ -1,0 +1,66 @@
+import warnings
+import math
+from scipy.stats import norm as normal_cdf  # uniquement pour la CDF
+
+def paired_sample_t_test(x_1_array, x_2_array, alpha=0.05, alternative="two-sided"):
+    """
+    Perform a paired sample t-test to compare the means of two related groups.
+
+    Parameters:
+        x_1_array : array of the first group
+        x_2_array : array of the second group
+        alpha : significance level (default 0.05)
+        alternative : type of alternative hypothesis ('two-sided', 'greater', 'less')
+
+    Returns:
+        dict with t, p-value and decision
+    """
+
+    differences = [a-b for a, b in zip(x_1_array, x_2_array)]
+    d_bar = sum(differences) / n
+
+    # Validation des entrees
+    if alternative not in {"two-sided", "greater", "less"}:
+        raise ValueError("alternative must be 'two-sided', 'greater' or 'less'")
+    
+    #2 moyennes de differences:
+    n = len(differences)
+    if n != len(x_1_array) or n != len(x_2_array):
+        raise ValueError("x_1_array and x_2_array must have the same length")
+    
+    s_d = math.sqrt(sum((d - d_bar) ** 2 for d in differences) / (n - 1))
+    
+    if s_d <= 0:
+        raise ValueError("Standard deviation of differences must be positive")
+    if not (0 < alpha < 1):
+        raise ValueError("alpha must be between 0 and 1")
+    if n < 30:
+        warnings.warn(
+            "n < 30: verify normality of the differences, otherwise prefer a paired sample t-test.",
+            UserWarning,
+            # Apply the warning to the caller of this function, not the python insighta library
+            stacklevel=2,
+        )
+    
+    # Statistique t
+    t = d_bar / (s_d / math.sqrt(n))
+    # Calcul p-value selon hypothèse alternative
+    if alternative == "two-sided":
+        p_value = 2 * (1 - normal_cdf(abs(t)))
+    elif alternative == "greater":
+        p_value = 1 - normal_cdf(t)
+    elif alternative == "less":
+        p_value = normal_cdf(t)
+    else:
+        raise ValueError("alternative must be 'two-sided', 'greater' or 'less'")
+    
+    decision = "Reject H0" if p_value < alpha else "Fail to reject H0"
+
+    return {
+        "t_statistic": t,
+        "p_value": p_value,
+        "alpha": alpha,
+        "decision": decision
+    }
+
+    
